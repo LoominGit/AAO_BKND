@@ -3,8 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload";
-import serverless from "serverless-http";
-
 import authRoutes from "./routes/user.routes.js";
 import studentRoutes from "./routes/student.routes.js";
 import resultRoutes from "./routes/result.routes.js";
@@ -22,19 +20,20 @@ app.use(cookieParser());
 app.use(
   fileUpload({
     useTempFiles: true,
-    tempFileDir: "/tmp/",
+    tempFileDir: "/tmp/", // Vercel only allows writing to /tmp
   }),
 );
+
 app.use(
   cors({
-    origin: "*",
+    origin: "*", // Change this to your frontend URL in production
     credentials: true,
   }),
 );
 
 // Health check
 app.get("/", (_req: Request, res: Response) => {
-  res.json({ message: "Server running" });
+  res.status(200).json({ message: "Server running" });
 });
 
 // Routes
@@ -44,25 +43,38 @@ app.use("/api/results", resultRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 // ✅ Connect DB ONCE per cold start
-let dbConnected = false;
+let isConnected = false;
 
-async function initDB() {
-  if (!dbConnected) {
-    await connectDB();
-    dbConnected = true;
-    console.log("✅ MongoDB ready");
+const connectDatabase = async () => {
+  if (!isConnected) {
+    try {
+      await connectDB();
+      isConnected = true;
+      console.log("✅ MongoDB ready");
+    } catch (error) {
+      console.error("❌ MongoDB connection failed:", error);
+      throw error; // Rethrow to ensure Vercel catches the startup error
+    }
   }
-}
+};
 
-// Wrap handler
-const handler = serverless(app);
+// Vercel Handler
+export default async function handler(req: Request, res: Response) {
+  // 1. Handle CORS preflight requests immediately
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
 
-export default async function main(req: any, res: any) {
   try {
-    await initDB();
-    return handler(req, res);
-  } catch (err) {
-    console.error("❌ Serverless crash:", err);
+    // 2. Ensure DB is connected
+    await connectDatabase();
+
+    // 3. Pass request to Express
+    // app is a function (req, res) => void
+    app(req, res);
+  } catch (error) {
+    console.error("Critical Server Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 }

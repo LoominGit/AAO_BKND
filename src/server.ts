@@ -26,7 +26,7 @@ app.use(
 
 app.use(
   cors({
-    origin: "*", // Change this to your frontend URL in production
+    origin: process.env.FRONTEND_URL, // Change this to your frontend URL in production
     credentials: true,
   }),
 );

@@ -12,29 +12,27 @@ const generateToken = (id: string, role: string) => {
 
 // Helper: Set Cookie & Send Response
 const sendTokenResponse = (user: IUser, statusCode: number, res: Response) => {
-  const token = generateToken(user._id as string, user.role);
+  // ✅ FIX: Use .toString() instead of 'as string'
+  const token = generateToken(user._id.toString(), user.role);
 
   // Cookie Options
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true, // Prevents client-side JS from reading the cookie (Security)
-    secure: process.env.NODE_ENV === "production", // Use HTTPS in production
+    httpOnly: true, // Prevents client-side JS from reading the cookie
+    secure: process.env.NODE_ENV === "production", // HTTPS in production
     sameSite:
       process.env.NODE_ENV === "production"
         ? ("none" as const)
-        : ("lax" as const), // CSRF protection
+        : ("lax" as const),
   };
 
-  res
-    .status(statusCode)
-    .cookie("token", token, options) // SET THE COOKIE
-    .json({
-      success: true,
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    });
+  res.status(statusCode).cookie("token", token, options).json({
+    success: true,
+    _id: user._id, // Mongoose automatically serializes this to string in JSON
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  });
 };
 
 // @desc    Register a new user

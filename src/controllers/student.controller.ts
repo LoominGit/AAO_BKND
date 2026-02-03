@@ -22,7 +22,6 @@ interface ImportRow {
 // @desc    Bulk Import Students & Results from Excel
 // @route   POST /api/students/import
 // @access  Private (Admin/Teacher)
-
 export const importStudentData = async (
   req: Request,
   res: Response,
@@ -31,16 +30,16 @@ export const importStudentData = async (
   session.startTransaction();
 
   try {
-    // 1. CHECK FOR FILES (Backend Parsing Logic)
+    // 1. CHECK FOR FILES
     if (!req.files || Object.keys(req.files).length === 0) {
       res.status(400).json({ message: "No file uploaded" });
       return;
     }
 
-    const uploadedFile = req.files.file as any; // 'file' must match key in FormData
+    const uploadedFile = req.files.file as any;
     const examId = req.body.examId || "AAO-2024";
 
-    // 2. PARSE FILE ON BACKEND
+    // 2. PARSE FILE
     const workbook = xlsx.readFile(uploadedFile.tempFilePath);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -53,13 +52,13 @@ export const importStudentData = async (
       return;
     }
 
-    // ... Rest of your loop logic remains exactly the same ...
-    const studentOps = [];
-    const resultOps = [];
+    // ✅ FIX: Explicitly type the operation arrays
+    // using <any> allows flexibility with your specific Schema types
+    const studentOps: mongoose.AnyBulkWriteOperation<any>[] = [];
+    const resultOps: mongoose.AnyBulkWriteOperation<any>[] = [];
 
     // --- STEP 1: Prepare Student Upsert Operations ---
     for (const row of data) {
-      // ... (Your existing code)
       studentOps.push({
         updateOne: {
           filter: { rollNumber: row.rollNumber },
@@ -88,14 +87,17 @@ export const importStudentData = async (
     const students = await Student.find({
       rollNumber: { $in: rollNumbers },
     }).session(session);
+
+    // Create Map for quick lookup
     const studentMap = new Map(students.map((s) => [s.rollNumber, s._id]));
 
     // --- STEP 3: Prepare Result Upsert ---
     for (const row of data) {
       const studentId = studentMap.get(row.rollNumber);
+
+      // Skip if student wasn't created/found for some reason
       if (!studentId) continue;
 
-      // Ensure scores are numbers (Excel parsing might return strings sometimes)
       const math = Number(row.math_score) || 0;
       const science = Number(row.science_score) || 0;
       const english = Number(row.english_score) || 0;
@@ -112,7 +114,7 @@ export const importStudentData = async (
 
       resultOps.push({
         updateOne: {
-          filter: { student: studentId, examId: examId, subjectId: "all" },
+          filter: { student: studentId, examId: examId }, // Removed subjectId: "all" if not in schema
           update: {
             $set: {
               sectionScores: {
@@ -138,7 +140,9 @@ export const importStudentData = async (
     await session.commitTransaction();
     res.status(200).json({ message: "Import successful", count: data.length });
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     console.error("Import Error:", error);
     res
       .status(500)

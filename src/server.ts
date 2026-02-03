@@ -20,15 +20,16 @@ app.use(
   fileUpload({
     useTempFiles: true,
     tempFileDir: "/tmp/",
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit to prevent memory crashes
+    limits: { fileSize: 10 * 1024 * 1024 },
   }),
 );
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.FRONTEND_URL, // Ensure this matches your frontend exactly
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Explicit methods help avoid preflight issues
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
@@ -42,44 +43,22 @@ app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-// Database Connection Cache
-let cachedConnection: any = null;
-
-const connectDatabase = async () => {
-  if (cachedConnection) {
-    return cachedConnection;
-  }
-
-  try {
-    cachedConnection = await connectDB();
-    console.log("✅ MongoDB Connected");
-    return cachedConnection;
-  } catch (error) {
-    console.error("❌ MongoDB Connection Error:", error);
-    // Do not throw here; let the handler catch it so we can return a 500 response
-    throw error;
-  }
-};
-
-// Vercel Entry Point
+// --- VERCEL HANDLER WRAPPER ---
+// This prevents the connection from closing or duplicating
 export default async function handler(req: Request, res: Response) {
-  // 1. Handle Preflight (OPTIONS)
-  // This is critical for CORS to work on Vercel
+  try {
+    await connectDB(); // Ensure DB is connected before processing
+  } catch (e) {
+    console.error("Database connection failed", e);
+    return res.status(500).json({ error: "Database connection failed" });
+  }
+
+  // Handle CORS Preflight Manually for Vercel
   if (req.method === "OPTIONS") {
     res.status(200).end();
     return;
   }
 
-  try {
-    // 2. Await DB Connection
-    await connectDatabase();
-
-    // 3. Pass request to Express
-    // DO NOT await this or wrap in a Promise.
-    // Express handles the response stream directly.
-    app(req, res);
-  } catch (error) {
-    console.error("Critical Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+  // Pass the request to Express
+  app(req, res);
 }

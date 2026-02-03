@@ -15,6 +15,10 @@ const app = express();
 import dbConnection from "./config/db.js";
 dbConnection();
 
+// seed admin user
+import seedAdminUser from "./scripts/seedAdmin.js";
+seedAdminUser();
+
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());

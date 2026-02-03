@@ -1,7 +1,7 @@
 import User from "../model/user.model.js";
 import bcrypt from "bcryptjs";
 
-export const seedAdminUser = async () => {
+const seedAdminUser = async () => {
   try {
     const adminEmail = "rohitkolk@gmail.com";
     const adminPassword = "Rohit1300"; // The initial hardcoded password
@@ -32,3 +32,5 @@ export const seedAdminUser = async () => {
     console.error("❌ Error seeding admin user:", error);
   }
 };
+
+export default seedAdminUser;

@@ -9,7 +9,6 @@ import resultRoutes from "./routes/result.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import connectDB from "./config/db.js";
 
-// Load env locally
 dotenv.config();
 
 const app = express();
@@ -20,61 +19,67 @@ app.use(cookieParser());
 app.use(
   fileUpload({
     useTempFiles: true,
-    tempFileDir: "/tmp/", // Vercel only allows writing to /tmp
+    tempFileDir: "/tmp/",
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit to prevent memory crashes
   }),
 );
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL, // Change this to your frontend URL in production
+    origin: process.env.FRONTEND_URL,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Explicit methods help avoid preflight issues
   }),
 );
 
-// Health check
+// Routes
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ message: "Server running" });
 });
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-// ✅ Connect DB ONCE per cold start
-let isConnected = false;
+// Database Connection Cache
+let cachedConnection: any = null;
 
 const connectDatabase = async () => {
-  if (!isConnected) {
-    try {
-      await connectDB();
-      isConnected = true;
-      console.log("✅ MongoDB ready");
-    } catch (error) {
-      console.error("❌ MongoDB connection failed:", error);
-      throw error; // Rethrow to ensure Vercel catches the startup error
-    }
+  if (cachedConnection) {
+    return cachedConnection;
+  }
+
+  try {
+    cachedConnection = await connectDB();
+    console.log("✅ MongoDB Connected");
+    return cachedConnection;
+  } catch (error) {
+    console.error("❌ MongoDB Connection Error:", error);
+    // Do not throw here; let the handler catch it so we can return a 500 response
+    throw error;
   }
 };
 
-// Vercel Handler
+// Vercel Entry Point
 export default async function handler(req: Request, res: Response) {
-  // 1. Handle CORS preflight requests immediately
+  // 1. Handle Preflight (OPTIONS)
+  // This is critical for CORS to work on Vercel
   if (req.method === "OPTIONS") {
     res.status(200).end();
     return;
   }
 
   try {
-    // 2. Ensure DB is connected
+    // 2. Await DB Connection
     await connectDatabase();
 
     // 3. Pass request to Express
-    // app is a function (req, res) => void
+    // DO NOT await this or wrap in a Promise.
+    // Express handles the response stream directly.
     app(req, res);
   } catch (error) {
-    console.error("Critical Server Error:", error);
+    console.error("Critical Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 }

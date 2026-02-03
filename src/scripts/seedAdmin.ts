@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 
 export const seedAdminUser = async () => {
   try {
-    const adminEmail = "rayanku24@gmail.com";
-    const adminPassword = "Rayan@00"; // The initial hardcoded password
+    const adminEmail = "rohitkolk@gmail.com";
+    const adminPassword = "Rohit1300"; // The initial hardcoded password
 
     // 1. Check if this specific admin already exists
     const existingAdmin = await User.findOne({ email: adminEmail });

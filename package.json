@@ -7,10 +7,20 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "nodemon --ext ts --exec \"npx tsc && node dist/server.js\""
+    "dev": "nodemon --ext ts --exec \"npx tsc && node dist/server.js\"",
+    "vercel-build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.x"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "@types/bcrypt": "^5.0.2",
+    "@vercel/node": "^5.5.28",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

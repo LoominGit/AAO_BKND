@@ -11,6 +11,25 @@ import connectDB from "./config/db.js";
 
 dotenv.config();
 
+// Database Connection Cache
+let cachedConnection: any = null;
+
+const connectDatabase = async () => {
+  if (cachedConnection) {
+    return cachedConnection;
+  }
+
+  try {
+    cachedConnection = await connectDB();
+    console.log("✅ MongoDB Connected");
+    return cachedConnection;
+  } catch (error) {
+    console.error("❌ MongoDB Connection Error:", error);
+    throw error;
+  }
+};
+
+// Create Express app
 const app = express();
 
 // Middlewares
@@ -26,10 +45,9 @@ app.use(
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL, // Ensure this matches your frontend exactly
+    origin: process.env.FRONTEND_URL || "*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
@@ -43,22 +61,42 @@ app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-// --- VERCEL HANDLER WRAPPER ---
-// This prevents the connection from closing or duplicating
+// Vercel Serverless Function Handler
 export default async function handler(req: Request, res: Response) {
-  try {
-    await connectDB(); // Ensure DB is connected before processing
-  } catch (e) {
-    console.error("Database connection failed", e);
-    return res.status(500).json({ error: "Database connection failed" });
-  }
-
-  // Handle CORS Preflight Manually for Vercel
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+      "Access-Control-Allow-Origin",
+      process.env.FRONTEND_URL || "*",
+    );
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,DELETE,OPTIONS",
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, Cookie",
+    );
     res.status(200).end();
     return;
   }
 
-  // Pass the request to Express
-  app(req, res);
+  try {
+    // Connect to database
+    await connectDatabase();
+
+    // Pass request to Express app
+    return new Promise<void>((resolve, reject) => {
+      app(req, res);
+
+      res.on("finish", () => resolve());
+      res.on("error", (err) => reject(err));
+    });
+  } catch (error) {
+    console.error("Critical Error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
 }

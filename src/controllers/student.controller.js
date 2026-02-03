@@ -1,31 +1,12 @@
-import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Student from "../model/student.model.js";
 import Result from "../model/result.model.js";
 import xlsx from "xlsx"; // Import the parser
 
-// Interface for incoming Excel Data Row
-interface ImportRow {
-  rollNumber: string;
-  studentName: string;
-  class: string;
-  section: string;
-  schoolName: string;
-  district: string;
-  state: string;
-  math_score: number;
-  science_score: number;
-  english_score: number;
-  gk_score: number;
-}
-
 // @desc    Bulk Import Students & Results from Excel
 // @route   POST /api/students/import
 // @access  Private (Admin/Teacher)
-export const importStudentData = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const importStudentData = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -36,7 +17,7 @@ export const importStudentData = async (
       return;
     }
 
-    const uploadedFile = req.files.file as any;
+    const uploadedFile = req.files.file;
     const examId = req.body.examId || "AAO-2024";
 
     // 2. PARSE FILE
@@ -45,7 +26,7 @@ export const importStudentData = async (
     const sheet = workbook.Sheets[sheetName];
 
     // Convert Excel to JSON
-    const data: ImportRow[] = xlsx.utils.sheet_to_json(sheet);
+    const data = xlsx.utils.sheet_to_json(sheet);
 
     if (!data || data.length === 0) {
       res.status(400).json({ message: "Excel sheet is empty" });
@@ -54,8 +35,8 @@ export const importStudentData = async (
 
     // ✅ FIX: Explicitly type the operation arrays
     // using <any> allows flexibility with your specific Schema types
-    const studentOps: mongoose.AnyBulkWriteOperation<any>[] = [];
-    const resultOps: mongoose.AnyBulkWriteOperation<any>[] = [];
+    const studentOps = [];
+    const resultOps = [];
 
     // --- STEP 1: Prepare Student Upsert Operations ---
     for (const row of data) {
@@ -154,7 +135,7 @@ export const importStudentData = async (
 
 // @desc    Get All Students with Filtering
 // @route   GET /api/students
-export const getStudents = async (req: Request, res: Response) => {
+export const getStudents = async (req, res) => {
   try {
     const {
       page = 1,
@@ -165,7 +146,7 @@ export const getStudents = async (req: Request, res: Response) => {
       search,
     } = req.query;
 
-    const query: any = { isActive: true };
+    const query = { isActive: true };
 
     if (school) query.school = school;
     if (district) query.district = district;
@@ -193,12 +174,10 @@ export const getStudents = async (req: Request, res: Response) => {
       totalStudents: total,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Something went wrong while fetching students",
-        error: error,
-        success: false,
-      });
+    res.status(500).json({
+      message: "Something went wrong while fetching students",
+      error: error,
+      success: false,
+    });
   }
 };

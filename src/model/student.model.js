@@ -1,19 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IStudent extends Document {
-  rollNumber: string;
-  name: string;
-  class: string;
-  section: string;
-  school: string;
-  district: string;
-  state: string;
-  country: string;
-  isActive: boolean;
-  createdAt: Date;
-}
-
-const StudentSchema: Schema = new Schema(
+const StudentSchema = new Schema(
   {
     rollNumber: { type: String, required: true, unique: true },
     name: { type: String, required: true },
@@ -33,4 +20,4 @@ const StudentSchema: Schema = new Schema(
 // Compound index for filtering (e.g., Get all Class 10 students in DPS)
 StudentSchema.index({ school: 1, class: 1 });
 
-export default mongoose.model<IStudent>("Student", StudentSchema);
+export default mongoose.model("Student", StudentSchema);

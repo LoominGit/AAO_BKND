@@ -1,17 +1,16 @@
-import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User, { IUser } from "../model/user.model.js";
+import User from "../model/user.model.js";
 
 // Helper: Generate Token
-const generateToken = (id: string, role: string) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET as string, {
+const generateToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: "30d",
   });
 };
 
 // Helper: Set Cookie & Send Response
-const sendTokenResponse = (user: IUser, statusCode: number, res: Response) => {
+const sendTokenResponse = (user, statusCode, res) => {
   try {
     // ✅ FIX: Use .toString() instead of 'as string'
     const token = generateToken(user._id.toString(), user.role);
@@ -21,10 +20,7 @@ const sendTokenResponse = (user: IUser, statusCode: number, res: Response) => {
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       httpOnly: true, // Prevents client-side JS from reading the cookie
       secure: process.env.NODE_ENV === "production", // HTTPS in production
-      sameSite:
-        process.env.NODE_ENV === "production"
-          ? ("none" as const)
-          : ("lax" as const),
+      sameSite: process.env.NODE_ENV === "production",
     };
 
     res.status(statusCode).cookie("token", token, options).json({
@@ -46,10 +42,7 @@ const sendTokenResponse = (user: IUser, statusCode: number, res: Response) => {
 // @desc    Register a new user
 // @route   POST /api/auth/signup
 // @access  Public
-export const registerUser = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const registerUser = async (req, res) => {
   const { name, email, password, role } = req.body;
 
   try {
@@ -100,7 +93,7 @@ export const registerUser = async (
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
 // @access  Public
-export const loginUser = async (req: Request, res: Response): Promise<void> => {
+export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -112,7 +105,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Compare Password
-    const isMatch = await bcrypt.compare(password, user.password as string);
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (isMatch) {
       sendTokenResponse(user, 200, res);
@@ -132,7 +125,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 // @desc    Log user out / clear cookie
 // @route   POST /api/auth/logout
 // @access  Private
-export const logoutUser = async (_: Request, res: Response) => {
+export const logoutUser = async (_, res) => {
   try {
     res.cookie("token", "none", {
       expires: new Date(Date.now() + 10 * 1000), // Expire in 10 seconds

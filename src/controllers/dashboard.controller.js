@@ -1,8 +1,7 @@
-import { Request, Response } from "express";
 import Student from "../model/student.model.js";
 import Result from "../model/result.model.js";
 
-export const getDashboardStats = async (_: Request, res: Response) => {
+export const getDashboardStats = async (_, res) => {
   try {
     // 1. Basic Counts
     const totalStudents = await Student.countDocuments();

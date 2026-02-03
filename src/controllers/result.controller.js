@@ -1,14 +1,13 @@
-import { Request, Response } from "express";
 import Result from "../model/result.model.js";
 import Student from "../model/student.model.js";
 
 // @desc    Get Leaderboard / Rankings
 // @route   GET /api/results/rankings?level=school&entity=DPS
-export const getRankings = async (req: Request, res: Response) => {
+export const getRankings = async (req, res) => {
   try {
     const { level, entity, limit = 50 } = req.query; // level: 'school' | 'district' | 'national'
 
-    const pipeline: any[] = [
+    const pipeline = [
       // 1. Join with Students to get names/schools
       {
         $lookup: {
@@ -70,10 +69,7 @@ export const getRankings = async (req: Request, res: Response) => {
 
 // @desc    Get Individual Student Report Data
 // @route   GET /api/results/report/:rollNumber
-export const getStudentReport = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const getStudentReport = async (req, res) => {
   try {
     const { rollNumber } = req.params;
 
@@ -150,12 +146,10 @@ export const getStudentReport = async (
     });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({
-        message: "Error generating report",
-        error: error,
-        success: false,
-      });
+    res.status(500).json({
+      message: "Error generating report",
+      error: error,
+      success: false,
+    });
   }
 };

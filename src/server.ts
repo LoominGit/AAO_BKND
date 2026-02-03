@@ -7,30 +7,13 @@ import authRoutes from "./routes/user.routes.js";
 import studentRoutes from "./routes/student.routes.js";
 import resultRoutes from "./routes/result.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
-import connectDB from "./config/db.js";
 
 dotenv.config();
-
-// Database Connection Cache
-let cachedConnection: any = null;
-
-const connectDatabase = async () => {
-  if (cachedConnection) {
-    return cachedConnection;
-  }
-
-  try {
-    cachedConnection = await connectDB();
-    console.log("✅ MongoDB Connected");
-    return cachedConnection;
-  } catch (error) {
-    console.error("❌ MongoDB Connection Error:", error);
-    throw error;
-  }
-};
-
-// Create Express app
 const app = express();
+
+// Importing the Database Connection
+import dbConnection from "./config/db.js";
+dbConnection();
 
 // Middlewares
 app.use(express.json());
@@ -61,42 +44,8 @@ app.use("/api/students", studentRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-// Vercel Serverless Function Handler
-export default async function handler(req: Request, res: Response) {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader(
-      "Access-Control-Allow-Origin",
-      process.env.FRONTEND_URL || "*",
-    );
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET,POST,PUT,DELETE,OPTIONS",
-    );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, Cookie",
-    );
-    res.status(200).end();
-    return;
-  }
+const PORT = process.env.PORT || 8080;
 
-  try {
-    // Connect to database
-    await connectDatabase();
-
-    // Pass request to Express app
-    return new Promise<void>((resolve, reject) => {
-      app(req, res);
-
-      res.on("finish", () => resolve());
-      res.on("error", (err) => reject(err));
-    });
-  } catch (error) {
-    console.error("Critical Error:", error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
-}
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});

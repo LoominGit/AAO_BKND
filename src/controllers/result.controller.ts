@@ -60,7 +60,11 @@ export const getRankings = async (req: Request, res: Response) => {
     res.json(rankings);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error fetching rankings" });
+    res.status(500).json({
+      message: "Error fetching rankings",
+      error: error,
+      success: false,
+    });
   }
 };
 
@@ -146,6 +150,12 @@ export const getStudentReport = async (
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error generating report" });
+    res
+      .status(500)
+      .json({
+        message: "Error generating report",
+        error: error,
+        success: false,
+      });
   }
 };

@@ -12,27 +12,35 @@ const generateToken = (id: string, role: string) => {
 
 // Helper: Set Cookie & Send Response
 const sendTokenResponse = (user: IUser, statusCode: number, res: Response) => {
-  // ✅ FIX: Use .toString() instead of 'as string'
-  const token = generateToken(user._id.toString(), user.role);
+  try {
+    // ✅ FIX: Use .toString() instead of 'as string'
+    const token = generateToken(user._id.toString(), user.role);
 
-  // Cookie Options
-  const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true, // Prevents client-side JS from reading the cookie
-    secure: process.env.NODE_ENV === "production", // HTTPS in production
-    sameSite:
-      process.env.NODE_ENV === "production"
-        ? ("none" as const)
-        : ("lax" as const),
-  };
+    // Cookie Options
+    const options = {
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      httpOnly: true, // Prevents client-side JS from reading the cookie
+      secure: process.env.NODE_ENV === "production", // HTTPS in production
+      sameSite:
+        process.env.NODE_ENV === "production"
+          ? ("none" as const)
+          : ("lax" as const),
+    };
 
-  res.status(statusCode).cookie("token", token, options).json({
-    success: true,
-    _id: user._id, // Mongoose automatically serializes this to string in JSON
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  });
+    res.status(statusCode).cookie("token", token, options).json({
+      success: true,
+      _id: user._id, // Mongoose automatically serializes this to string in JSON
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong while sending token",
+      error: error,
+      success: false,
+    });
+  }
 };
 
 // @desc    Register a new user
@@ -81,7 +89,11 @@ export const registerUser = async (
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      message: "Something went wrong while registering user",
+      error: error,
+      success: false,
+    });
   }
 };
 
@@ -109,7 +121,11 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      message: "Something went wrong while logging in",
+      error: error,
+      success: false,
+    });
   }
 };
 
@@ -117,10 +133,19 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 // @route   POST /api/auth/logout
 // @access  Private
 export const logoutUser = async (_: Request, res: Response) => {
-  res.cookie("token", "none", {
-    expires: new Date(Date.now() + 10 * 1000), // Expire in 10 seconds
-    httpOnly: true,
-  });
+  try {
+    res.cookie("token", "none", {
+      expires: new Date(Date.now() + 10 * 1000), // Expire in 10 seconds
+      httpOnly: true,
+    });
 
-  res.status(200).json({ success: true, message: "User logged out" });
+    res.status(200).json({ success: true, message: "User logged out" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Something went wrong while logging out",
+      error: error,
+      success: false,
+    });
+  }
 };

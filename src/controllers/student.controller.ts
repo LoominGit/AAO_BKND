@@ -146,7 +146,7 @@ export const importStudentData = async (
     console.error("Import Error:", error);
     res
       .status(500)
-      .json({ message: "Import failed", error: (error as Error).message });
+      .json({ message: "Import failed", error: error, success: false });
   } finally {
     session.endSession();
   }
@@ -193,6 +193,12 @@ export const getStudents = async (req: Request, res: Response) => {
       totalStudents: total,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    res
+      .status(500)
+      .json({
+        message: "Something went wrong while fetching students",
+        error: error,
+        success: false,
+      });
   }
 };

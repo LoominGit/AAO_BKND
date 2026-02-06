@@ -13,11 +13,24 @@ const app = express();
 
 // Importing the Database Connection
 import dbConnection from "./config/db.js";
-dbConnection();
 
-// seed admin user
+// Seed admin user
 import seedAdminUser from "./scripts/seedAdmin.js";
-seedAdminUser();
+
+// Initialize database and seed admin
+const initializeApp = async () => {
+  try {
+    await dbConnection();
+    await seedAdminUser();
+    console.log("✅ App initialized successfully");
+  } catch (error) {
+    console.error("❌ Failed to initialize app:", error);
+    process.exit(1);
+  }
+};
+
+// Initialize on startup for local development
+initializeApp();
 
 // Middlewares
 app.use(express.json());
